@@ -1,0 +1,29 @@
+/* taken from my other stylesheet, dreamerslegacy.xyz/css/schema.css */
+@import url('https://fonts.googleapis.com/css2?family=Open+Sans&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inconsolata&display=swap');
+body {
+    font-family: 'Inconsolata', monospace;
+    background-color: rgb(32,32,32);
+}
+.schema {
+    padding: 40px;
+    margin-left: 2%;
+    margin-right: 2%;
+    margin-top: 1%;
+    margin-bottom: 1%;
+    background-color: rgb(48, 48, 48);
+}
+h1, h2, h3, h4, h5, h6 {
+    font-family: 'Open Sans', sans-serif;
+    color: white;
+}
+h1 {
+    text-align: left;
+    margin-left: 5px;
+}
+h3 {
+    margin-top: 40px;
+}
+p, a, li {
+    color: whitesmoke;
+}
