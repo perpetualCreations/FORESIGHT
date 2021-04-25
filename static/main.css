@@ -27,3 +27,21 @@ h3 {
 p, a, li {
     color: whitesmoke;
 }
+input {
+    color: whitesmoke;
+    background-color: rgb(48, 48, 48);
+    font-family: 'Inconsolata', monospace;
+    border: 0.05rem solid white;
+}
+.button {
+    background-color: slategray;
+    border: none;
+    color: white;
+    padding: 15px 36px;
+    text-align: center;
+    text-decoration: none;
+    display: inline-block;
+    font-size: 15px;
+    width: auto;
+    height: auto;
+}

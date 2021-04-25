@@ -12,17 +12,7 @@
             <h1>FORESIGHT</h1>
             <p>Server ID: {{ serverid }}</p>
             <hr>
-            <div style = "display: flex; justify-content: center; align-items: center; padding-top: 5%; padding-bottom: 5%;">
-                <div style = "border: 0.1rem solid white; padding-left: 30%; padding-right: 30%; padding-top: 5%; padding-bottom: 6%;">
-                    <h2>Good evening, morning, or afternoon, administrator.</h2>
-                    <p>Please login with your password.</p>
-                    <hr>
-                    <div style = "padding-top: 10%;">
-                        <input type = "password" name = "password" required>
-                        <input type = "submit">
-                    </div>
-                </div>
-            </div>
+            <a class = "button" href = "{{ url_for('logout') }}">Logout</a>
         </div>
     </body>
 </html>
