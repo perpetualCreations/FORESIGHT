@@ -44,25 +44,39 @@ def index():
     return flask.render_template("index.html", serverid=config["CORE"]["ID"])
 
 
-@application.route("/auth/", methods=["POST"])
-def login_auth():
-    if flask.request.method == "POST":
+@application.route("/password/", methods=["GET", "POST"])
+@flask_login.login_required
+def change_password():
+    if flask.request.method == "GET":
+        return flask.render_template("change_password.html", serverid=config["CORE"]["ID"], error="")
+    elif flask.request.method == "POST":
+        if flask.request.form["password"] == flask.request.form["password_affirm"]:
+            config["CORE"]["PASSWORD"] = sha3_512(flask.request.form["password"].encode("ascii")).hexdigest()
+            with open("main.cfg", "wb") as config_overwrite:
+                config.write(config_overwrite)
+            return flask.redirect(flask.url_for("index"))
+        else:
+            return flask.render_template("change_password.html", serverid=config["CORE"]["ID"],
+                                         error="Passwords don't match.")
+    else:
+        flask.abort(405)
+
+
+@application.route("/login/", methods=["GET", "POST"])
+def login():
+    if flask.request.method == "GET":
+        return flask.render_template("login.html", serverid=config["CORE"]["ID"], error="")
+    elif flask.request.method == "POST":
         if sha3_512(flask.request.form["password"].encode("ascii", "replace")).hexdigest() == \
                 config["CORE"]["PASSWORD"]:
             user = User()
             user.id = users["username"]
             flask_login.login_user(user)
-            flask.flash("Login successful.", "info")
             return flask.redirect(flask.url_for("index"))
         else:
-            return flask.render_template("login.html")
+            return flask.render_template("login.html", serverid=config["CORE"]["ID"], error="Invalid password.")
     else:
         flask.abort(405)
-
-
-@application.route("/login/")
-def login():
-    return flask.render_template("login.html", serverid=config["CORE"]["ID"])
 
 
 @application.route("/logout/")

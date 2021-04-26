@@ -12,7 +12,10 @@
             <h1>FORESIGHT</h1>
             <p>Server ID: {{ serverid }}</p>
             <hr>
-            <a class = "button" href = "{{ url_for('logout') }}">Logout</a>
+            <div style = "display: flex;">
+                <a class = "button" href = "{{ url_for('logout') }}">Logout</a>
+                <a style = "margin-left: 1%;" class = "button" href = "{{ url_for('change_password') }}">Change Password</a>
+            </div>
         </div>
     </body>
 </html>

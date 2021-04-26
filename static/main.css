@@ -34,9 +34,10 @@ input {
     border: 0.05rem solid white;
 }
 .button {
-    background-color: slategray;
-    border: none;
-    color: white;
+    background-color: rgb(48, 48, 48);
+    font-family: 'Inconsolata', monospace;
+    border: 0.05rem solid white;
+    color: whitesmoke;
     padding: 15px 36px;
     text-align: center;
     text-decoration: none;
