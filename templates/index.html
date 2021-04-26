@@ -16,6 +16,14 @@
                 <a class = "button" href = "{{ url_for('logout') }}">Logout</a>
                 <a style = "margin-left: 1%;" class = "button" href = "{{ url_for('change_password') }}">Change Password</a>
             </div>
+            <hr>
+            {% for interface in interfaces %}
+            <div class = "card">
+                <h2>{{ interface }}</h2>
+                <p>Hostname: {{ interface["host"] }}, Port: {{ interface["port"] }}</p>
+                <hr>
+            </div>
+            {% endfor %}
         </div>
     </body>
 </html>

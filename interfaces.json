@@ -1,0 +1,50 @@
+{
+  "__docs": "for more information on how to use this file.",
+  "NameOfBackendApplicationHere": {
+    "isExample": true,
+    "host": "0.0.0.0",
+    "port": "42069",
+    "in": {
+      "exampleStartButton": {
+        "type": "button",
+        "command": "BACKEND_COMMAND_START",
+        "section": null
+      },
+      "exampleEntry": {
+        "type": "textEntry",
+        "command": "BACKEND_COMMAND_SENDING_TEXT",
+        "section": null
+      },
+      "specialButton": {
+        "type": "button",
+        "command": "BACKEND_COMMAND_SPECIAL",
+        "section": "special"
+      },
+      "tabExampleEntry": {
+        "type": "textEntry",
+        "command": "BACKEND_COMMAND_TEXT_UNDER_A_TAB",
+        "section": "underTab"
+      }
+    },
+    "out": {
+      "statusDisplay": {
+        "type": "textDisplay",
+        "command": "BACKEND_COMMAND_GET_STATUS",
+        "pollRateInSeconds": "10"
+      },
+      "outputDisplay": {
+        "type": "textDisplay",
+        "command": "BACKEND_COMMAND_GET_OTHER",
+        "pollRateInSeconds": null
+      }
+    },
+    "sections": {
+      "special": {
+        "type": "hr"
+      },
+      "underTab": {
+        "type": "tab"
+      }
+    }
+  }
+}

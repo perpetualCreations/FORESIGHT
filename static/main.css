@@ -46,3 +46,8 @@ input {
     width: auto;
     height: auto;
 }
+.card {
+    background-color: rgb(48, 48, 48);
+    padding: 30px;
+    margin-top: 20px;
+}
