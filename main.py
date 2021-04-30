@@ -14,6 +14,7 @@ import flask_login
 import configparser
 import json
 import swbs
+import jinja2
 import threading
 from os import urandom
 from ast import literal_eval
@@ -28,6 +29,9 @@ login_manager.init_app(application)
 login_manager.login_view = "login"
 users = {"username": "admin"}
 
+interface_template_loader = jinja2.FileSystemLoader(searchpath="interfaces/")
+interface_template_environment = jinja2.Environment(loader=interface_template_loader)
+
 with open("interfaces.json") as interface_config_handler:
     interfaces = json.load(interface_config_handler)
 
@@ -35,10 +39,6 @@ try:
     del interfaces["__docs"]
 except KeyError:
     pass
-
-for interface in list(interfaces.keys()):
-    if interfaces[interface]["isExample"] is True:
-        del interfaces[interface]
 
 
 class User(flask_login.UserMixin):
@@ -51,6 +51,29 @@ class User(flask_login.UserMixin):
 class InterfaceClient(swbs.Client):
     def __init__(self, host, port, key, key_is_path):
         super().__init__(host, port, key, key_is_path)
+
+
+for interface in list(interfaces.keys()):
+    content = []
+    if interfaces[interface]["isExample"] is True:
+        del interfaces[interface]
+        continue
+    else:
+        for section in interfaces[interface]["sections"]:
+            for element in interfaces[interface]["sections"][section]:
+                if isinstance(element, dict) is True:
+                    parameters = interfaces[interface]["sections"][section][element]
+                    del parameters["type"]
+                    interface_element = interface_template_environment.get_template(interfaces[interface]["sections"]
+                                                                                    [section][element]["type"] +
+                                                                                    ".html").render(**parameters)
+                else:
+                    continue
+            content.append(interface_template_environment.get_template(interfaces[interface][section]["type"] + ".html"
+                                                                       ).render(label=interfaces[interface][section]
+                                                                                ["label"], interfaces=interfaces))
+
+    interfaces[interface].update({"sections_render": content})
 
 
 @login_manager.user_loader

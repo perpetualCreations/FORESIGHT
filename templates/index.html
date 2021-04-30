@@ -7,6 +7,7 @@
         <link rel="icon" href="{{ url_for('static', filename = 'favicon.ico') }}">
         <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename = 'main.css') }}">
     </head>
+    <script src="{{ url_for('static', filename = 'collapse.js') }}"></script>
     <body>
         <div class = "schema">
             <h1>FORESIGHT</h1>
@@ -17,11 +18,18 @@
                 <a style = "margin-left: 1%;" class = "button" href = "{{ url_for('change_password') }}">Change Password</a>
             </div>
             <hr>
+            <noscript>
+                <p style = "color: #ff4545;">JavaScript is required for FORESIGHT to process live I/O.</p>
+            </noscript>
             {% for interface in interfaces %}
             <div class = "card">
+                <hr>
                 <h2>{{ interface }}</h2>
                 <p>Hostname: {{ interface["host"] }}, Port: {{ interface["port"] }}</p>
                 <hr>
+                {% for section in interface["sections_render"] %}
+                {{ section }}
+                {% endfor %}
             </div>
             {% endfor %}
         </div>

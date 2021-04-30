@@ -3,7 +3,7 @@
 @import url('https://fonts.googleapis.com/css2?family=Inconsolata&display=swap');
 body {
     font-family: 'Inconsolata', monospace;
-    background-color: rgb(32,32,32);
+    background-color: rgb(32, 32, 32);
 }
 .schema {
     padding: 40px;
@@ -50,4 +50,34 @@ input {
     background-color: rgb(48, 48, 48);
     padding: 30px;
     margin-top: 20px;
+}
+.collapsible {
+    background-color: rgb(52, 52, 52);
+    margin-top: 5px;
+    font-family: 'Inconsolata', monospace;
+    color: white;
+    cursor: pointer;
+    padding: 18px;
+    width: 100%;
+    border: none;
+    text-align: left;
+    outline: none;
+    font-size: 15px;
+}
+.collapsible:after {
+    content: '▼';
+    color: white;
+    font-weight: bold;
+    float: right;
+    margin-left: 5px;
+}
+.active, .collapsible:hover {
+    background-color: rgb(64, 64, 64);
+}
+.content {
+    padding: 0 18px;
+    max-height: 0;
+    overflow: hidden;
+    transition: 0.2s ease-out;
+    background-color: rgb(80, 80, 80);
 }

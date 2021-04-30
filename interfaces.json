@@ -4,46 +4,42 @@
     "isExample": true,
     "host": "0.0.0.0",
     "port": "42069",
-    "in": {
-      "exampleStartButton": {
-        "type": "button",
-        "command": "BACKEND_COMMAND_START",
-        "section": null
-      },
-      "exampleEntry": {
-        "type": "textEntry",
-        "command": "BACKEND_COMMAND_SENDING_TEXT",
-        "section": null
-      },
-      "specialButton": {
-        "type": "button",
-        "command": "BACKEND_COMMAND_SPECIAL",
-        "section": "special"
-      },
-      "tabExampleEntry": {
-        "type": "textEntry",
-        "command": "BACKEND_COMMAND_TEXT_UNDER_A_TAB",
-        "section": "underTab"
-      }
-    },
-    "out": {
-      "statusDisplay": {
-        "type": "textDisplay",
-        "command": "BACKEND_COMMAND_GET_STATUS",
-        "pollRateInSeconds": "10"
-      },
-      "outputDisplay": {
-        "type": "textDisplay",
-        "command": "BACKEND_COMMAND_GET_OTHER",
-        "pollRateInSeconds": null
-      }
-    },
+    "auth": null,
+    "authIsPath": false,
     "sections": {
-      "special": {
-        "type": "hr"
+      "exampleHorizontalRuleSection": {
+        "type": "hr",
+        "label": "Horizontal Rule Section",
+        "exampleStartButton": {
+          "type": "button",
+          "command": "BACKEND_COMMAND_START",
+          "label": "Button"
+        },
+        "exampleLabel": {
+          "type": "label"
+        },
+        "exampleEntry": {
+          "type": "textEntry",
+          "command": "BACKEND_COMMAND_SENDING_TEXT"
+        },
+        "exampleTextDisplayLabel": {
+          "type": "textDisplayLabel",
+          "command": "BACKEND_COMMAND_GET_TEXT_LABEL",
+          "pollRateInSeconds": "10"
+        },
+        "exampleTextDisplayBox": {
+          "type": "textDisplayBox",
+          "command": "BACKEND_COMMAND_GET_TEXT_BOX",
+          "pollRateInSeconds": "1"
+        }
       },
-      "underTab": {
-        "type": "tab"
+      "exampleCollapsibleSection": {
+        "type": "collapsible",
+        "label": "Collapsible Section",
+        "tabExampleEntry": {
+          "type": "textEntryBox",
+          "command": "BACKEND_COMMAND_TEXT_UNDER_A_COLLAPSIBLE"
+        }
       }
     }
   }
