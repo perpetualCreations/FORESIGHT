@@ -11,6 +11,7 @@ Project FORESIGHT
 
 import flask
 import flask_login
+import flask_socketio
 import configparser
 import json
 import swbs
@@ -19,6 +20,7 @@ import threading
 from os import urandom
 from ast import literal_eval
 from hashlib import sha3_512
+from functools import wraps
 
 config = configparser.ConfigParser()
 config.read("main.cfg")
@@ -28,6 +30,7 @@ login_manager = flask_login.LoginManager()
 login_manager.init_app(application)
 login_manager.login_view = "login"
 users = {"username": "admin"}
+socket_io = flask_socketio.SocketIO(application)
 
 interface_template_loader = jinja2.FileSystemLoader(searchpath="interfaces/")
 interface_template_environment = jinja2.Environment(loader=interface_template_loader)
@@ -52,28 +55,57 @@ class InterfaceClient(swbs.Client):
     def __init__(self, host, port, key, key_is_path):
         super().__init__(host, port, key, key_is_path)
 
+    def connect_wrapper(self) -> None:
+        """
+        Wrapper for swbs.Client.connect, with additional calls to specify ARIA protocol.
+        :return: None
+        """
+        InterfaceClient.connect(self)
+        if InterfaceClient.receive(self) == "REQUEST TYPE":
+            InterfaceClient.send(self, "FORESIGHT")
+        else:
+            InterfaceClient.send(self, "KEYERROR")
+            raise Exception("Failed to initialize interface host!")
+
+
+def authenticated_only(target_function):
+    @wraps(target_function)
+    def wrapped(*args, **kwargs):
+        if not flask_login.current_user.is_authenticated:
+            flask_socketio.disconnect()
+        else:
+            return target_function(*args, **kwargs)
+    return wrapped
+
 
 for interface in list(interfaces.keys()):
     content = []
+    interface_elements = ""
     if interfaces[interface]["isExample"] is True:
         del interfaces[interface]
         continue
     else:
         for section in interfaces[interface]["sections"]:
             for element in interfaces[interface]["sections"][section]:
-                if isinstance(element, dict) is True:
+                if isinstance(interfaces[interface]["sections"][section][element], dict) is True:
                     parameters = interfaces[interface]["sections"][section][element]
                     del parameters["type"]
-                    interface_element = interface_template_environment.get_template(interfaces[interface]["sections"]
-                                                                                    [section][element]["type"] +
-                                                                                    ".html").render(**parameters)
+                    interface_elements += interface_template_environment.get_template(interfaces[interface]["sections"]
+                                                                                      [section][element]["type"] +
+                                                                                      ".html").render(**parameters)
                 else:
                     continue
             content.append(interface_template_environment.get_template(interfaces[interface][section]["type"] + ".html"
                                                                        ).render(label=interfaces[interface][section]
-                                                                                ["label"], interfaces=interfaces))
+                                                                                ["label"], interfaces=
+                                                                                interface_elements))
 
-    interfaces[interface].update({"sections_render": content})
+        interfaces[interface].update({"sections_render": content})
+        interfaces[interface].update({"interface_client": InterfaceClient(interfaces[interface]["host"],
+                                                                          interfaces[interface]["port"],
+                                                                          interfaces[interface]["auth"],
+                                                                          interfaces[interface]["authIsPath"]
+                                                                          ).connect_wrapper()})
 
 
 @login_manager.user_loader
@@ -81,6 +113,12 @@ def user_loader(user_id) -> User:
     user = User()
     user.id = user_id
     return user
+
+
+@socket_io.on("connect")
+def connect_handler() -> any:
+    if flask_login.current_user.is_authenticated is not True:
+        return False
 
 
 @application.route("/")
@@ -165,4 +203,4 @@ def logout() -> any:
 
 
 if __name__ == "__main__":
-    application.run(debug=literal_eval(config["CORE"]["DEBUG"]), port=int(config["NET"]["PORT"]))
+    socket_io.run(application, debug=literal_eval(config["CORE"]["DEBUG"]), port=int(config["NET"]["PORT"]))
