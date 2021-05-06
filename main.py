@@ -21,6 +21,7 @@ from os import urandom
 from ast import literal_eval
 from hashlib import sha3_512
 from functools import wraps
+from time import sleep
 
 config = configparser.ConfigParser()
 config.read("main.cfg")
@@ -88,6 +89,12 @@ for interface in list(interfaces.keys()):
         for section in interfaces[interface]["sections"]:
             for element in interfaces[interface]["sections"][section]:
                 if isinstance(interfaces[interface]["sections"][section][element], dict) is True:
+                    if "pollRateInSeconds" in list(interfaces[interface]["sections"][section][element].keys()):
+                        interfaces[interface]["sections"][section][element].update({"id": sha3_512(urandom(4096)
+                                                                                                   ).hexdigest()})
+                    if "command" in list(interfaces[interface]["sections"][section][element].keys()) and \
+                            "pollRateInSeconds" not in list(interfaces[interface]["sections"][section][element].keys()):
+                        interfaces[interface]["section"][section][element].update({"parent_interface": interface})
                     parameters = interfaces[interface]["sections"][section][element]
                     del parameters["type"]
                     interface_elements += interface_template_environment.get_template(interfaces[interface]["sections"]
@@ -97,8 +104,8 @@ for interface in list(interfaces.keys()):
                     continue
             content.append(interface_template_environment.get_template(interfaces[interface][section]["type"] + ".html"
                                                                        ).render(label=interfaces[interface][section]
-                                                                                ["label"], interfaces=
-                                                                                interface_elements))
+                                                                                ["label"], interfaces=interface_elements
+                                                                                ))
 
         interfaces[interface].update({"sections_render": content})
         interfaces[interface].update({"interface_client": InterfaceClient(interfaces[interface]["host"],
@@ -106,6 +113,31 @@ for interface in list(interfaces.keys()):
                                                                           interfaces[interface]["auth"],
                                                                           interfaces[interface]["authIsPath"]
                                                                           ).connect_wrapper()})
+        interfaces[interface].update({"interface_client_lock": threading.Lock()})
+
+
+@socket_io.on("pollUpdate")
+def poll_data_broadcaster(data: dict):
+    flask_socketio.send(data, json=True, broadcast=True)
+
+
+def interface_client_poller(target_interface: str, target_section: str, target_element: str) -> None:
+    """
+    Polling thread for textDisplayLabel, and textDisplayBox elements.
+
+    :param target_interface: str, key for target interface
+    :param target_section: str, key for target interface section
+    :param target_element: str, key for target interface element
+    :return: None
+    """
+    while True:
+        interfaces[target_interface]["interface_client_lock"].acquire(blocking=True)
+        interfaces[target_interface]["interface_client"].send(interfaces[target_interface][target_section]
+                                                              [target_element]["command"])
+        poll_data_broadcaster({"data": interfaces[target_interface]["interface_client"].receive(), "id":
+                               interfaces[target_interface]["sections"][section][element]["id"]})
+        interfaces[target_interface]["interface_client_lock"].release()
+        sleep(float(interfaces[target_interface]["sections"][section][element]["pollRateInSeconds"]))
 
 
 @login_manager.user_loader
@@ -119,6 +151,20 @@ def user_loader(user_id) -> User:
 def connect_handler() -> any:
     if flask_login.current_user.is_authenticated is not True:
         return False
+
+
+@socket_io.on("json")
+@authenticated_only
+def command_handler(json_payload) -> None:
+    command_payload = json.loads(str(json_payload))
+    if command_payload["request_type"] == "SIGNAL":
+        interfaces[command_payload["interface"]]["interface_client_lock"].acquire(blocking=True)
+        interfaces[command_payload["interface"]]["interface_client"].send(command_payload["command"])
+    elif command_payload["request_type"] == "PAYLOAD":
+        interfaces[command_payload["interface"]]["interface_client_lock"].acquire(blocking=True)
+        interfaces[command_payload["interface"]]["interface_client"].send(command_payload["command"])
+        interfaces[command_payload["interface"]]["interface_client"].receive()
+        interfaces[command_payload["interface"]]["interface_client"].send(command_payload["payload"])
 
 
 @application.route("/")
@@ -174,7 +220,10 @@ def login() -> any:
     :return: any
     """
     if flask.request.method == "GET":
-        return flask.render_template("login.html", serverid=config["CORE"]["ID"], error="")
+        if flask_login.current_user.is_authenticated is True:
+            return flask.redirect(flask.url_for("index"))
+        else:
+            return flask.render_template("login.html", serverid=config["CORE"]["ID"], error="")
     elif flask.request.method == "POST":
         if sha3_512(flask.request.form["password"].encode("ascii", "replace")).hexdigest() == \
                 config["CORE"]["PASSWORD"]:

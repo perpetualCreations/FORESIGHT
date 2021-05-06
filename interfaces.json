@@ -16,7 +16,8 @@
           "label": "Button"
         },
         "exampleLabel": {
-          "type": "label"
+          "type": "label",
+          "text": "This is an example label!"
         },
         "exampleEntry": {
           "type": "textEntry",
@@ -36,7 +37,7 @@
       "exampleCollapsibleSection": {
         "type": "collapsible",
         "label": "Collapsible Section",
-        "tabExampleEntry": {
+        "exampleTextEntryBox": {
           "type": "textEntryBox",
           "command": "BACKEND_COMMAND_TEXT_UNDER_A_COLLAPSIBLE"
         }
