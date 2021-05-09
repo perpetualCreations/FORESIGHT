@@ -1,0 +1,6 @@
+<script>
+function {{ id }}SocketFunction() {
+    socket.emit('command', { command : '{{ command }}' });
+}
+</script>
+<input class = "button" id = "{{ id }}" type = "button" value = "{{ label }}" onclick = "{{ id }}SocketFunction();">

@@ -19,7 +19,7 @@ import jinja2
 import threading
 from os import urandom
 from ast import literal_eval
-from hashlib import sha3_512
+from hashlib import sha3_512, md5
 from functools import wraps
 from time import sleep
 
@@ -61,12 +61,16 @@ class InterfaceClient(swbs.Client):
         Wrapper for swbs.Client.connect, with additional calls to specify ARIA protocol.
         :return: None
         """
+        pass
+        # todo undo the neuter
+        """
         InterfaceClient.connect(self)
         if InterfaceClient.receive(self) == "REQUEST TYPE":
             InterfaceClient.send(self, "FORESIGHT")
         else:
             InterfaceClient.send(self, "KEYERROR")
             raise Exception("Failed to initialize interface host!")
+        """
 
 
 def authenticated_only(target_function):
@@ -89,23 +93,19 @@ for interface in list(interfaces.keys()):
         for section in interfaces[interface]["sections"]:
             for element in interfaces[interface]["sections"][section]:
                 if isinstance(interfaces[interface]["sections"][section][element], dict) is True:
-                    if "pollRateInSeconds" in list(interfaces[interface]["sections"][section][element].keys()):
-                        interfaces[interface]["sections"][section][element].update({"id": sha3_512(urandom(4096)
-                                                                                                   ).hexdigest()})
-                    if "command" in list(interfaces[interface]["sections"][section][element].keys()) and \
-                            "pollRateInSeconds" not in list(interfaces[interface]["sections"][section][element].keys()):
-                        interfaces[interface]["section"][section][element].update({"parent_interface": interface})
+                    interfaces[interface]["sections"][section][element].update({"id": md5(urandom(4096)).hexdigest()})
+                    interfaces[interface]["sections"][section][element].update({"parent_interface": interface})
                     parameters = interfaces[interface]["sections"][section][element]
-                    del parameters["type"]
                     interface_elements += interface_template_environment.get_template(interfaces[interface]["sections"]
                                                                                       [section][element]["type"] +
                                                                                       ".html").render(**parameters)
                 else:
                     continue
-            content.append(interface_template_environment.get_template(interfaces[interface][section]["type"] + ".html"
-                                                                       ).render(label=interfaces[interface][section]
-                                                                                ["label"], interfaces=interface_elements
-                                                                                ))
+            content.append(interface_template_environment.get_template(interfaces[interface]["sections"][section]
+                                                                       ["type"] + ".html"
+                                                                       ).render(label=interfaces[interface]["sections"]
+                                                                                [section]["label"],
+                                                                                interfaces=interface_elements))
 
         interfaces[interface].update({"sections_render": content})
         interfaces[interface].update({"interface_client": InterfaceClient(interfaces[interface]["host"],
@@ -118,7 +118,7 @@ for interface in list(interfaces.keys()):
 
 @socket_io.on("pollUpdate")
 def poll_data_broadcaster(data: dict):
-    flask_socketio.send(data, json=True, broadcast=True)
+    flask_socketio.emit(data, json=True, broadcast=True)
 
 
 def interface_client_poller(target_interface: str, target_section: str, target_element: str) -> None:
@@ -153,7 +153,7 @@ def connect_handler() -> any:
         return False
 
 
-@socket_io.on("json")
+@socket_io.on("command")
 @authenticated_only
 def command_handler(json_payload) -> None:
     command_payload = json.loads(str(json_payload))

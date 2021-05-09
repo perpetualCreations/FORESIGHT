@@ -25,17 +25,19 @@
             <noscript>
                 <p style = "color: #ff4545;">JavaScript is required for FORESIGHT to process live I/O.</p>
             </noscript>
-            {% for interface in interfaces %}
-            <div class = "card">
-                <hr>
-                <h2>{{ interface }}</h2>
-                <p>Hostname: {{ interfaces[interface]["host"] }}, Port: {{ interfaces[interface]["port"] }}</p>
-                <hr>
-                {% for section in interfaces[interface]["sections_render"] %}
-                {{ section }}
+            <div style = "display: flex;">
+                {% for interface in interfaces %}
+                <div class = "card">
+                    <hr>
+                    <h2>{{ interface }}</h2>
+                    <p>Hostname: {{ interfaces[interface]["host"] }}, Port: {{ interfaces[interface]["port"] }}</p>
+                    <hr>
+                    {% for section in interfaces[interface]["sections_render"] %}
+                    {{ section|safe }}
+                    {% endfor %}
+                </div>
                 {% endfor %}
             </div>
-            {% endfor %}
         </div>
     </body>
 </html>
