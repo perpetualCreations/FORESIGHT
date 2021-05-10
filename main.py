@@ -34,7 +34,8 @@ users = {"username": "admin"}
 socket_io = flask_socketio.SocketIO(application)
 
 interface_template_loader = jinja2.FileSystemLoader(searchpath="interfaces/")
-interface_template_environment = jinja2.Environment(loader=interface_template_loader)
+interface_template_environment = jinja2.Environment(
+    loader=interface_template_loader)
 
 with open("interfaces.json") as interface_config_handler:
     interfaces = json.load(interface_config_handler)
@@ -46,23 +47,26 @@ except KeyError:
 
 
 class User(flask_login.UserMixin):
-    """
-    Flask user model. Refer to documentation of Flask-Login for more information.
-    """
-    pass
+    """Flask user model."""
 
 
 class InterfaceClient(swbs.Client):
+    """Socket interface instance class."""
+
     def __init__(self, host, port, key, key_is_path):
+        """Class initialization."""
         super().__init__(host, port, key, key_is_path)
 
     def connect_wrapper(self) -> None:
         """
-        Wrapper for swbs.Client.connect, with additional calls to specify ARIA protocol.
+        Serve as a wrapper for swbs.Client.connect.
+
+        Has additional calls to specify ARIA protocol.
+
         :return: None
         """
         pass
-        # todo undo the neuter
+        # TODO undo the neuter
         """
         InterfaceClient.connect(self)
         if InterfaceClient.receive(self) == "REQUEST TYPE":
@@ -74,6 +78,7 @@ class InterfaceClient(swbs.Client):
 
 
 def authenticated_only(target_function):
+    """Define decorator for flask_socketio functions, requiring auth."""
     @wraps(target_function)
     def wrapped(*args, **kwargs):
         if not flask_login.current_user.is_authenticated:
@@ -92,38 +97,44 @@ for interface in list(interfaces.keys()):
     else:
         for section in interfaces[interface]["sections"]:
             for element in interfaces[interface]["sections"][section]:
-                if isinstance(interfaces[interface]["sections"][section][element], dict) is True:
-                    interfaces[interface]["sections"][section][element].update({"id": md5(urandom(4096)).hexdigest()})
-                    interfaces[interface]["sections"][section][element].update({"parent_interface": interface})
-                    parameters = interfaces[interface]["sections"][section][element]
-                    interface_elements += interface_template_environment.get_template(interfaces[interface]["sections"]
-                                                                                      [section][element]["type"] +
-                                                                                      ".html").render(**parameters)
+                if isinstance(interfaces[interface]["sections"][section]
+                              [element], dict) is True:
+                    interfaces[interface]["sections"][section][element].update(
+                        {"id": md5(urandom(4096)).hexdigest()})
+                    interfaces[interface]["sections"][section][element].update(
+                        {"parent_interface": interface})
+                    interface_elements += \
+                        interface_template_environment.get_template(
+                            interfaces[interface]["sections"][section][element]
+                            ["type"] + ".html").render(
+                                **interfaces[interface]["sections"][section]
+                                [element])
                 else:
                     continue
-            content.append(interface_template_environment.get_template(interfaces[interface]["sections"][section]
-                                                                       ["type"] + ".html"
-                                                                       ).render(label=interfaces[interface]["sections"]
-                                                                                [section]["label"],
-                                                                                interfaces=interface_elements))
+            content.append(interface_template_environment.get_template(
+                interfaces[interface]["sections"][section]["type"] + ".html"
+                ).render(label=interfaces[interface]["sections"][section]
+                         ["label"], interfaces=interface_elements))
 
         interfaces[interface].update({"sections_render": content})
-        interfaces[interface].update({"interface_client": InterfaceClient(interfaces[interface]["host"],
-                                                                          interfaces[interface]["port"],
-                                                                          interfaces[interface]["auth"],
-                                                                          interfaces[interface]["authIsPath"]
-                                                                          ).connect_wrapper()})
-        interfaces[interface].update({"interface_client_lock": threading.Lock()})
+        interfaces[interface].update({"interface_client": InterfaceClient(
+            interfaces[interface]["host"], interfaces[interface]["port"],
+            interfaces[interface]["auth"], interfaces[interface]["authIsPath"]
+            ).connect_wrapper()})
+        interfaces[interface].update({"interface_client_lock":
+                                      threading.Lock()})
 
 
 @socket_io.on("pollUpdate")
 def poll_data_broadcaster(data: dict):
+    """Emit event pollUpdate to all clients as a broadcast."""
     flask_socketio.emit(data, json=True, broadcast=True)
 
 
-def interface_client_poller(target_interface: str, target_section: str, target_element: str) -> None:
+def interface_client_poller(target_interface: str, target_section: str,
+                            target_element: str) -> None:
     """
-    Polling thread for textDisplayLabel, and textDisplayBox elements.
+    Thread for textDisplayLabel and textDisplayBox element polling.
 
     :param target_interface: str, key for target interface
     :param target_section: str, key for target interface section
@@ -131,17 +142,23 @@ def interface_client_poller(target_interface: str, target_section: str, target_e
     :return: None
     """
     while True:
-        interfaces[target_interface]["interface_client_lock"].acquire(blocking=True)
-        interfaces[target_interface]["interface_client"].send(interfaces[target_interface][target_section]
-                                                              [target_element]["command"])
-        poll_data_broadcaster({"data": interfaces[target_interface]["interface_client"].receive(), "id":
-                               interfaces[target_interface]["sections"][section][element]["id"]})
+        interfaces[target_interface]["interface_client_lock"].acquire(
+            blocking=True)
+        interfaces[target_interface]["interface_client"].send(
+            interfaces[target_interface][target_section][target_element]
+            ["command"])
+        poll_data_broadcaster(
+            {"data": interfaces[target_interface]
+             ["interface_client"].receive(), "id": interfaces[target_interface]
+             ["sections"][section][element]["id"]})
         interfaces[target_interface]["interface_client_lock"].release()
-        sleep(float(interfaces[target_interface]["sections"][section][element]["pollRateInSeconds"]))
+        sleep(float(interfaces[target_interface]["sections"][section][element]
+                    ["pollRateInSeconds"]))
 
 
 @login_manager.user_loader
 def user_loader(user_id) -> User:
+    """Flask Login function required for loading the admin user."""
     user = User()
     user.id = user_id
     return user
@@ -149,6 +166,7 @@ def user_loader(user_id) -> User:
 
 @socket_io.on("connect")
 def connect_handler() -> any:
+    """Handle websocket connections."""
     if flask_login.current_user.is_authenticated is not True:
         return False
 
@@ -156,55 +174,72 @@ def connect_handler() -> any:
 @socket_io.on("command")
 @authenticated_only
 def command_handler(json_payload) -> None:
+    """Handle websocket command request events from clients."""
     command_payload = json.loads(str(json_payload))
+    interfaces[command_payload["interface"]
+               ]["interface_client_lock"].acquire(blocking=True)
     if command_payload["request_type"] == "SIGNAL":
-        interfaces[command_payload["interface"]]["interface_client_lock"].acquire(blocking=True)
-        interfaces[command_payload["interface"]]["interface_client"].send(command_payload["command"])
+        interfaces[command_payload["interface"]
+                   ]["interface_client"].send(command_payload["command"])
     elif command_payload["request_type"] == "PAYLOAD":
-        interfaces[command_payload["interface"]]["interface_client_lock"].acquire(blocking=True)
-        interfaces[command_payload["interface"]]["interface_client"].send(command_payload["command"])
-        interfaces[command_payload["interface"]]["interface_client"].receive()
-        interfaces[command_payload["interface"]]["interface_client"].send(command_payload["payload"])
+        interfaces[command_payload["interface"]
+                   ]["interface_client"].send(command_payload["command"])
+        interfaces[command_payload["interface"]
+                   ]["interface_client"].receive()
+        interfaces[command_payload["interface"]
+                   ]["interface_client"].send(command_payload["payload"])
+    interfaces[command_payload["interface"]
+               ]["interface_client_lock"].release()
 
 
 @application.route("/")
 @flask_login.login_required
 def index() -> any:
     """
-    Renders index.html when root is requested.
+    Render index.html when root is requested.
+
     Serves as homepage with control panels.
 
     Requires login.
 
     :return: any
     """
-    return flask.render_template("index.html", serverid=config["CORE"]["ID"], interfaces=interfaces)
+    return flask.render_template("index.html", serverid=config["CORE"]["ID"],
+                                 interfaces=interfaces)
 
 
 @application.route("/password/", methods=["GET", "POST"])
 @flask_login.login_required
 def change_password() -> any:
     """
-    Renders change_password.html when requested with GET.
+    Render change_password.html when requested with GET.
+
     Serves as utility page for changing the admin password.
     Validates and commits password change when requested with POST.
     Re-renders page with an error message if re-typed password is different.
-
     Requires login.
 
     :return: any
     """
     if flask.request.method == "GET":
-        return flask.render_template("change_password.html", serverid=config["CORE"]["ID"], error="")
+        return flask.render_template("change_password.html",
+                                     serverid=config["CORE"]["ID"], error="")
     elif flask.request.method == "POST":
-        if flask.request.form["password"] == flask.request.form["password_affirm"]:
-            config["CORE"]["PASSWORD"] = sha3_512(flask.request.form["password"].encode("ascii")).hexdigest()
+        if flask.request.form["password"] == \
+                flask.request.form["password_affirm"]:
+            config["CORE"]["PASSWORD"
+                           ] = sha3_512(
+                               flask.request.form["password"
+                                                  ].encode("ascii")
+                                                  ).hexdigest()
             with open("main.cfg", "wb") as config_overwrite:
                 config.write(config_overwrite)
             return flask.redirect(flask.url_for("index"))
         else:
-            return flask.render_template("change_password.html", serverid=config["CORE"]["ID"],
-                                         error="Passwords don't match.", form=flask.request.form)
+            return flask.render_template("change_password.html",
+                                         serverid=config["CORE"]["ID"],
+                                         error="Passwords don't match.",
+                                         form=flask.request.form)
     else:
         flask.abort(405)
 
@@ -212,10 +247,13 @@ def change_password() -> any:
 @application.route("/login/", methods=["GET", "POST"])
 def login() -> any:
     """
-    Renders login.html when requested with GET.
+    Render login.html when requested with GET.
+
     Serves as login page for users to authenticate themselves.
-    Validates password submissions when requested with POST, and redirects to root.
-    Re-renders page with an error message if password is invalid when compared to hash.
+    Validates password submissions when requested with POST,
+    and redirects to root.
+    Re-renders page with an error message if password is invalid
+    when compared to hash.
 
     :return: any
     """
@@ -223,16 +261,20 @@ def login() -> any:
         if flask_login.current_user.is_authenticated is True:
             return flask.redirect(flask.url_for("index"))
         else:
-            return flask.render_template("login.html", serverid=config["CORE"]["ID"], error="")
+            return flask.render_template("login.html",
+                                         serverid=config["CORE"]["ID"],
+                                         error="")
     elif flask.request.method == "POST":
-        if sha3_512(flask.request.form["password"].encode("ascii", "replace")).hexdigest() == \
-                config["CORE"]["PASSWORD"]:
+        if sha3_512(flask.request.form["password"].encode("ascii", "replace")
+                    ).hexdigest() == config["CORE"]["PASSWORD"]:
             user = User()
             user.id = users["username"]
             flask_login.login_user(user)
             return flask.redirect(flask.url_for("index"))
         else:
-            return flask.render_template("login.html", serverid=config["CORE"]["ID"], error="Invalid password.")
+            return flask.render_template("login.html",
+                                         serverid=config["CORE"]["ID"],
+                                         error="Invalid password.")
     else:
         flask.abort(405)
 
@@ -241,7 +283,7 @@ def login() -> any:
 @flask_login.login_required
 def logout() -> any:
     """
-    Logs out user session, and redirects to login page.
+    Log out user session, and redirect to login page.
 
     Requires login.
 
@@ -252,4 +294,5 @@ def logout() -> any:
 
 
 if __name__ == "__main__":
-    socket_io.run(application, debug=literal_eval(config["CORE"]["DEBUG"]), port=int(config["NET"]["PORT"]))
+    socket_io.run(application, debug=literal_eval(config["CORE"]["DEBUG"]),
+                  port=int(config["NET"]["PORT"]))

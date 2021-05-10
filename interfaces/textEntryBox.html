@@ -1,0 +1,10 @@
+<div style = "display: flex;" id = "{{ id }}">
+    <input id = "{{ id }}TextEntry" type = "text" style = "width: 90%; min-height: fit-content;">
+    <script>
+        function {{ id }}SocketFunction() {
+            socket.emit('command', { command : '{{ command }}', payload : document.getElementById("{{ id }}TextEntry").value});
+            document.getElementById("{{ id }}TextEntry").value = "";
+        }
+    </script>
+    <input class = "button" id = "{{ id }}TextEntryReturnButton" type = "button" value = "&#9166;" onclick = "{{ id }}SocketFunction();" style = "width: 10%; min-height: fit-content;">
+</div>
