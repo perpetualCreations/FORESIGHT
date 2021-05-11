@@ -19,9 +19,12 @@ import jinja2
 import threading
 from os import urandom
 from ast import literal_eval
-from hashlib import sha3_512, md5
+from hashlib import sha3_512
 from functools import wraps
 from time import sleep
+from random import choices
+from string import ascii_lowercase
+
 
 config = configparser.ConfigParser()
 config.read("main.cfg")
@@ -90,17 +93,17 @@ def authenticated_only(target_function):
 
 for interface in list(interfaces.keys()):
     content = []
-    interface_elements = ""
     if interfaces[interface]["isExample"] is True:
         del interfaces[interface]
         continue
     else:
         for section in interfaces[interface]["sections"]:
+            interface_elements = ""
             for element in interfaces[interface]["sections"][section]:
                 if isinstance(interfaces[interface]["sections"][section]
                               [element], dict) is True:
                     interfaces[interface]["sections"][section][element].update(
-                        {"id": md5(urandom(4096)).hexdigest()})
+                        {"id": ''.join(choices(ascii_lowercase, k=128))})
                     interfaces[interface]["sections"][section][element].update(
                         {"parent_interface": interface})
                     interface_elements += \
@@ -114,7 +117,7 @@ for interface in list(interfaces.keys()):
             content.append(interface_template_environment.get_template(
                 interfaces[interface]["sections"][section]["type"] + ".html"
                 ).render(label=interfaces[interface]["sections"][section]
-                         ["label"], interfaces=interface_elements))
+                        ["label"], interfaces=interface_elements))
 
         interfaces[interface].update({"sections_render": content})
         interfaces[interface].update({"interface_client": InterfaceClient(

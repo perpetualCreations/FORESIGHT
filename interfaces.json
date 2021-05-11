@@ -26,6 +26,7 @@
         "exampleTextDisplayLabel": {
           "type": "textDisplayLabel",
           "command": "BACKEND_COMMAND_GET_TEXT_LABEL",
+          "defaultLabel": "[no data]",
           "pollRateInSeconds": "10"
         },
         "exampleTextDisplayBox": {
@@ -39,7 +40,7 @@
         "label": "Collapsible Section",
         "exampleTextEntryBox": {
           "type": "textEntryBox",
-          "command": "BACKEND_COMMAND_TEXT_UNDER_A_COLLAPSIBLE"
+          "command": "BACKEND_COMMAND_SENDING_TEXT_BOX"
         }
       }
     }

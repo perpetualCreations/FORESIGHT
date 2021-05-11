@@ -7,12 +7,11 @@
         <link rel="icon" href="{{ url_for('static', filename = 'favicon.ico') }}">
         <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename = 'main.css') }}">
     </head>
-    <script src="{{ url_for('static', filename = 'collapse.js') }}"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js" integrity="sha512-q/dWJ3kcmjBLU4Qc47E4A9kTB4m3wuTY7vkFJDTZKjTs8jhyGQnaUrxa0Ytd0ssMZhbNua9hE+E7Qv1j+DyZwA==" crossorigin="anonymous"></script>
-    <script>
-        var socket = io();
-    </script>
     <body>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js" integrity="sha512-q/dWJ3kcmjBLU4Qc47E4A9kTB4m3wuTY7vkFJDTZKjTs8jhyGQnaUrxa0Ytd0ssMZhbNua9hE+E7Qv1j+DyZwA==" crossorigin="anonymous"></script>
+        <script>
+            var socket = io();
+        </script>
         <div class = "schema">
             <h1>FORESIGHT</h1>
             <p>Server ID: {{ serverid }}</p>
@@ -27,7 +26,7 @@
             </noscript>
             <div style = "display: flex;">
                 {% for interface in interfaces %}
-                <div class = "card">
+                <div class = "card" style = "width: 30%; margin-left: 1.5%; margin-right: 1.5%;">
                     <hr>
                     <h2>{{ interface }}</h2>
                     <p>Hostname: {{ interfaces[interface]["host"] }}, Port: {{ interfaces[interface]["port"] }}</p>
@@ -38,6 +37,22 @@
                 </div>
                 {% endfor %}
             </div>
+            <script>
+                var coll = document.getElementsByClassName("collapsible");
+                var i;
+                for (i = 0; i < coll.length; i++) {
+                coll[i].addEventListener("click", function() {
+                    this.classList.toggle("active");
+                    document.getElementsByClassName("collapsible:after").content = "▲";
+                    var content = this.nextElementSibling;
+                    if (content.style.maxHeight){
+                    content.style.maxHeight = null;
+                    } else {
+                    content.style.maxHeight = content.scrollHeight + "px";
+                    }
+                });
+                }
+            </script>
         </div>
     </body>
 </html>

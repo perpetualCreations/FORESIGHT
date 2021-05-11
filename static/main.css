@@ -27,7 +27,7 @@ h3 {
 p, a, li {
     color: whitesmoke;
 }
-input {
+input, textarea {
     color: whitesmoke;
     background-color: rgb(48, 48, 48);
     font-family: 'Inconsolata', monospace;
@@ -58,6 +58,7 @@ input {
     color: white;
     cursor: pointer;
     padding: 18px;
+    padding-bottom: 5%;
     width: 100%;
     border: none;
     text-align: left;
