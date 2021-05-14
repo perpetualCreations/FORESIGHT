@@ -1,6 +1,6 @@
                     <script>
                         function {{ id }}SocketFunction() {
-                            socket.emit('command', { command : '{{ command }}' });
+                            socket.emit("command", {"command":"{{ command }}", "interface":"{{ parent_interface }}", "requestType":"SIGNAL"});
                         }
                     </script>
                     <button class = "button" id = "{{ id }}" onclick = "{{ id }}SocketFunction();" style = "width: 100%;">{{ label }}</button>

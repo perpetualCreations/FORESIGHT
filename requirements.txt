@@ -3,3 +3,5 @@ Flask-Login
 Flask-SocketIO
 swbs
 jinja2
+gevent
+gevent-websocket

@@ -2,7 +2,7 @@
                         <textarea id = "{{ id }}TextEntry" style = "width: 90%; resize: none;"></textarea>
                         <script>
                             function {{ id }}SocketFunction() {
-                                socket.emit('command', { command : '{{ command }}', payload : document.getElementById("{{ id }}TextEntry").value});
+                                socket.emit("command", {"command":"{{ command }}", "interface":"{{ parent_interface }}", "payload":document.getElementById("{{ id }}TextEntry").value, "requestType":"PAYLOAD"});
                                 document.getElementById("{{ id }}TextEntry").value = "";
                             }
                         </script>

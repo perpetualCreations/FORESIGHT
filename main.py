@@ -117,13 +117,14 @@ for interface in list(interfaces.keys()):
             content.append(interface_template_environment.get_template(
                 interfaces[interface]["sections"][section]["type"] + ".html"
                 ).render(label=interfaces[interface]["sections"][section]
-                        ["label"], interfaces=interface_elements))
+                         ["label"], interfaces=interface_elements))
 
         interfaces[interface].update({"sections_render": content})
         interfaces[interface].update({"interface_client": InterfaceClient(
             interfaces[interface]["host"], interfaces[interface]["port"],
             interfaces[interface]["auth"], interfaces[interface]["authIsPath"]
-            ).connect_wrapper()})
+            )})
+        interfaces[interface]["interface_client"].connect_wrapper()
         interfaces[interface].update({"interface_client_lock":
                                       threading.Lock()})
 
@@ -178,13 +179,14 @@ def connect_handler() -> any:
 @authenticated_only
 def command_handler(json_payload) -> None:
     """Handle websocket command request events from clients."""
-    command_payload = json.loads(str(json_payload))
+    json_payload = str(json_payload).replace("'", '"')
+    command_payload = json.loads(json_payload)
     interfaces[command_payload["interface"]
                ]["interface_client_lock"].acquire(blocking=True)
-    if command_payload["request_type"] == "SIGNAL":
+    if command_payload["requestType"] == "SIGNAL":
         interfaces[command_payload["interface"]
                    ]["interface_client"].send(command_payload["command"])
-    elif command_payload["request_type"] == "PAYLOAD":
+    elif command_payload["requestType"] == "PAYLOAD":
         interfaces[command_payload["interface"]
                    ]["interface_client"].send(command_payload["command"])
         interfaces[command_payload["interface"]

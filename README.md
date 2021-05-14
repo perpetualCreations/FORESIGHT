@@ -9,5 +9,7 @@ Featuring basic password logins, powered by the Flask-Login project.
 For web sockets support, FORESIGHT uses the SocketIO Javascript library,
 loaded from [cdnjs.cloudflare.com](https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js).
 
+The web interface stylesheet is loaded from [dreamerslegacy.xyz](https://dreamerslegacy.xyz/css/schema.min.css).
+
 For users going off-grid, consider downloading 3rd-party assets from their sources,
 and editing references in FORESIGHT's source code to the local copy.

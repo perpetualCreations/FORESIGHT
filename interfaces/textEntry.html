@@ -2,7 +2,7 @@
                         <input id = "{{ id }}TextEntry" type = "text" style = "width: 90%;">
                         <script>
                             function {{ id }}SocketFunction() {
-                                socket.emit('command', { command : '{{ command }}', payload : document.getElementById("{{ id }}TextEntry").value});
+                                socket.emit("command", {"command":"{{ command }}", "interface":"{{ parent_interface }}", "payload":document.getElementById("{{ id }}TextEntry").value, "requestType":"PAYLOAD"});
                                 document.getElementById("{{ id }}TextEntry").value = "";
                             }
                         </script>
