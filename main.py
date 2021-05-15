@@ -40,6 +40,8 @@ interface_template_loader = jinja2.FileSystemLoader(searchpath="interfaces/")
 interface_template_environment = jinja2.Environment(
     loader=interface_template_loader)
 
+pollers = []
+
 with open("interfaces.json") as interface_config_handler:
     interfaces = json.load(interface_config_handler)
 
@@ -91,45 +93,8 @@ def authenticated_only(target_function):
     return wrapped
 
 
-for interface in list(interfaces.keys()):
-    content = []
-    if interfaces[interface]["isExample"] is True:
-        del interfaces[interface]
-        continue
-    else:
-        for section in interfaces[interface]["sections"]:
-            interface_elements = ""
-            for element in interfaces[interface]["sections"][section]:
-                if isinstance(interfaces[interface]["sections"][section]
-                              [element], dict) is True:
-                    interfaces[interface]["sections"][section][element].update(
-                        {"id": ''.join(choices(ascii_lowercase, k=128))})
-                    interfaces[interface]["sections"][section][element].update(
-                        {"parent_interface": interface})
-                    interface_elements += \
-                        interface_template_environment.get_template(
-                            interfaces[interface]["sections"][section][element]
-                            ["type"] + ".html").render(
-                                **interfaces[interface]["sections"][section]
-                                [element])
-                else:
-                    continue
-            content.append(interface_template_environment.get_template(
-                interfaces[interface]["sections"][section]["type"] + ".html"
-                ).render(label=interfaces[interface]["sections"][section]
-                         ["label"], interfaces=interface_elements))
-
-        interfaces[interface].update({"sections_render": content})
-        interfaces[interface].update({"interface_client": InterfaceClient(
-            interfaces[interface]["host"], int(interfaces[interface]["port"]),
-            interfaces[interface]["auth"], interfaces[interface]["authIsPath"]
-            )})
-        interfaces[interface]["interface_client"].connect_wrapper()
-        interfaces[interface].update({"interface_client_lock":
-                                      threading.Lock()})
-
-
 @socket_io.on("pollUpdate")
+@authenticated_only
 def poll_data_broadcaster(data: dict):
     """Emit event pollUpdate to all clients as a broadcast."""
     flask_socketio.emit(data, json=True, broadcast=True)
@@ -158,6 +123,49 @@ def interface_client_poller(target_interface: str, target_section: str,
         interfaces[target_interface]["interface_client_lock"].release()
         sleep(float(interfaces[target_interface]["sections"][section][element]
                     ["pollRateInSeconds"]))
+
+
+for interface in list(interfaces.keys()):
+    content = []
+    if interfaces[interface]["isExample"] is True:
+        del interfaces[interface]
+        continue
+    else:
+        for section in interfaces[interface]["sections"]:
+            interface_elements = ""
+            for element in interfaces[interface]["sections"][section]:
+                if isinstance(interfaces[interface]["sections"][section]
+                              [element], dict) is True:
+                    interfaces[interface]["sections"][section][element].update(
+                        {"id": ''.join(choices(ascii_lowercase, k=128))})
+                    interfaces[interface]["sections"][section][element].update(
+                        {"parent_interface": interface})
+                    interface_elements += \
+                        interface_template_environment.get_template(
+                            interfaces[interface]["sections"][section][element]
+                            ["type"] + ".html").render(
+                                **interfaces[interface]["sections"][section]
+                                [element])
+                    if interfaces[interface]["sections"][section][element][
+                            "type"] in ["textDisplayBox", "textDisplayLabel"]:
+                        pollers.append(interface_client_poller(interface,
+                                                               section,
+                                                               element))
+                else:
+                    continue
+            content.append(interface_template_environment.get_template(
+                interfaces[interface]["sections"][section]["type"] + ".html"
+                ).render(label=interfaces[interface]["sections"][section]
+                         ["label"], interfaces=interface_elements))
+
+        interfaces[interface].update({"sections_render": content})
+        interfaces[interface].update({"interface_client": InterfaceClient(
+            interfaces[interface]["host"], int(interfaces[interface]["port"]),
+            interfaces[interface]["auth"], interfaces[interface]["authIsPath"]
+            )})
+        interfaces[interface]["interface_client"].connect_wrapper()
+        interfaces[interface].update({"interface_client_lock":
+                                      threading.Lock()})
 
 
 @login_manager.user_loader

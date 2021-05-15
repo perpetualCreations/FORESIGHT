@@ -28,11 +28,11 @@ for section in test_interface:
         if isinstance(current_element, dict) is not True:
             continue
         if current_element["type"] in ["textEntry", "textEntryBox"]:
-            commands.update({current_element["command"]: ["PAYLOAD"]})
+            commands.update({current_element["command"]: "PAYLOAD"})
         elif current_element["type"] == "button":
-            commands.update({current_element["command"]: ["SIGNAL"]})
+            commands.update({current_element["command"]: "SIGNAL"})
         elif current_element["type"] in ["textDisplayBox", "textDisplayLabel"]:
-            commands.update({current_element["command"]: ["POLL"]})
+            commands.update({current_element["command"]: "POLL"})
 
 server = swbs.Host(42069, None)
 server.listen()
@@ -51,7 +51,7 @@ while True:
             server.send("OK!")
             print("Received (PAYLOAD): ", server.receive())
         elif commands[request] == "SIGNAL":
-            print("Received (SIGNAL): ", server.receive())
+            print("Received (SIGNAL): ", request)
         elif commands[request] == "POLL":
             server.send("Hello World! UNIX: " + str(time()))
     except KeyError:
