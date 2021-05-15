@@ -53,6 +53,7 @@ while True:
         elif commands[request] == "SIGNAL":
             print("Received (SIGNAL): ", request)
         elif commands[request] == "POLL":
+            print("Sent POLL data.")
             server.send("Hello World! UNIX: " + str(time()))
     except KeyError:
         print("Mangled Request: ", request)

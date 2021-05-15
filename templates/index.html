@@ -12,8 +12,9 @@
         <script>
             var socket = io();
             socket.on("pollUpdate", data => {
-                let pollUpdateData = JSON.parse(data);
-                document.getElementById(pollUpdateData["id"]).value = pollUpdateData["data"];
+                /* value for textarea and textContent for paragraphs */
+                document.getElementById(data["id"]).value = data["data"];
+                document.getElementById(data["id"]).textContent = data["data"];
             });
         </script>
         <div class = "schema">

@@ -55,6 +55,21 @@ class User(flask_login.UserMixin):
     """Flask user model."""
 
 
+@login_manager.user_loader
+def user_loader(user_id) -> User:
+    """Flask Login function required for loading the admin user."""
+    user = User()
+    user.id = user_id
+    return user
+
+
+@socket_io.on("connect")
+def connect_handler() -> any:
+    """Handle websocket connections, checking for login auth."""
+    if flask_login.current_user.is_authenticated is not True:
+        return False
+
+
 class InterfaceClient(swbs.Client):
     """Socket interface instance class."""
 
@@ -70,10 +85,6 @@ class InterfaceClient(swbs.Client):
 
         :return: None
         """
-        print("===BEGIN DUMP===")
-        print(self.host)
-        print(self.port)
-        print("====END DUMP====")
         InterfaceClient.connect(self)
         if InterfaceClient.receive(self) == "REQUEST TYPE":
             InterfaceClient.send(self, "FORESIGHT")
@@ -82,22 +93,12 @@ class InterfaceClient(swbs.Client):
             raise Exception("Failed to initialize interface host!")
 
 
-def authenticated_only(target_function):
-    """Define decorator for flask_socketio functions, requiring auth."""
-    @wraps(target_function)
-    def wrapped(*args, **kwargs):
-        if not flask_login.current_user.is_authenticated:
-            flask_socketio.disconnect()
-        else:
-            return target_function(*args, **kwargs)
-    return wrapped
-
-
 @socket_io.on("pollUpdate")
-@authenticated_only
 def poll_data_broadcaster(data: dict):
     """Emit event pollUpdate to all clients as a broadcast."""
-    flask_socketio.emit(data, json=True, broadcast=True)
+    with application.app_context():
+        flask_socketio.emit("pollUpdate", data, json=True, broadcast=True,
+                            namespace="/")
 
 
 def interface_client_poller(target_interface: str, target_section: str,
@@ -111,18 +112,22 @@ def interface_client_poller(target_interface: str, target_section: str,
     :return: None
     """
     while True:
+        while flask_login.current_user is None:
+            pass
         interfaces[target_interface]["interface_client_lock"].acquire(
             blocking=True)
         interfaces[target_interface]["interface_client"].send(
-            interfaces[target_interface][target_section][target_element]
-            ["command"])
+            interfaces[target_interface]["sections"][target_section]
+            [target_element]["command"])
         poll_data_broadcaster(
             {"data": interfaces[target_interface]
              ["interface_client"].receive(), "id": interfaces[target_interface]
-             ["sections"][section][element]["id"]})
+             ["sections"][target_section][target_element]["id"]})
         interfaces[target_interface]["interface_client_lock"].release()
-        sleep(float(interfaces[target_interface]["sections"][section][element]
-                    ["pollRateInSeconds"]))
+        sleep(float(interfaces[target_interface
+                               ]["sections"][target_section
+                                             ][target_element][
+                                                 "pollRateInSeconds"]))
 
 
 for interface in list(interfaces.keys()):
@@ -131,6 +136,13 @@ for interface in list(interfaces.keys()):
         del interfaces[interface]
         continue
     else:
+        interfaces[interface].update({"interface_client": InterfaceClient(
+            interfaces[interface]["host"], int(interfaces[interface]["port"]),
+            interfaces[interface]["auth"], interfaces[interface]["authIsPath"]
+            )})
+        interfaces[interface]["interface_client"].connect_wrapper()
+        interfaces[interface].update({"interface_client_lock":
+                                      threading.Lock()})
         for section in interfaces[interface]["sections"]:
             interface_elements = ""
             for element in interfaces[interface]["sections"][section]:
@@ -148,9 +160,10 @@ for interface in list(interfaces.keys()):
                                 [element])
                     if interfaces[interface]["sections"][section][element][
                             "type"] in ["textDisplayBox", "textDisplayLabel"]:
-                        pollers.append(interface_client_poller(interface,
-                                                               section,
-                                                               element))
+                        pollers.append(threading.Thread(
+                            target=interface_client_poller,
+                            args=(interface, section, element), daemon=True
+                            ).start())
                 else:
                     continue
             content.append(interface_template_environment.get_template(
@@ -159,32 +172,9 @@ for interface in list(interfaces.keys()):
                          ["label"], interfaces=interface_elements))
 
         interfaces[interface].update({"sections_render": content})
-        interfaces[interface].update({"interface_client": InterfaceClient(
-            interfaces[interface]["host"], int(interfaces[interface]["port"]),
-            interfaces[interface]["auth"], interfaces[interface]["authIsPath"]
-            )})
-        interfaces[interface]["interface_client"].connect_wrapper()
-        interfaces[interface].update({"interface_client_lock":
-                                      threading.Lock()})
-
-
-@login_manager.user_loader
-def user_loader(user_id) -> User:
-    """Flask Login function required for loading the admin user."""
-    user = User()
-    user.id = user_id
-    return user
-
-
-@socket_io.on("connect")
-def connect_handler() -> any:
-    """Handle websocket connections."""
-    if flask_login.current_user.is_authenticated is not True:
-        return False
 
 
 @socket_io.on("command")
-@authenticated_only
 def command_handler(json_payload) -> None:
     """Handle websocket command request events from clients."""
     json_payload = str(json_payload).replace("'", '"')
