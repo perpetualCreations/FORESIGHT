@@ -68,16 +68,16 @@ class InterfaceClient(swbs.Client):
 
         :return: None
         """
-        pass
-        # TODO undo the neuter
-        """
+        print("===BEGIN DUMP===")
+        print(self.host)
+        print(self.port)
+        print("====END DUMP====")
         InterfaceClient.connect(self)
         if InterfaceClient.receive(self) == "REQUEST TYPE":
             InterfaceClient.send(self, "FORESIGHT")
         else:
             InterfaceClient.send(self, "KEYERROR")
             raise Exception("Failed to initialize interface host!")
-        """
 
 
 def authenticated_only(target_function):
@@ -121,7 +121,7 @@ for interface in list(interfaces.keys()):
 
         interfaces[interface].update({"sections_render": content})
         interfaces[interface].update({"interface_client": InterfaceClient(
-            interfaces[interface]["host"], interfaces[interface]["port"],
+            interfaces[interface]["host"], int(interfaces[interface]["port"]),
             interfaces[interface]["auth"], interfaces[interface]["authIsPath"]
             )})
         interfaces[interface]["interface_client"].connect_wrapper()
@@ -300,4 +300,4 @@ def logout() -> any:
 
 if __name__ == "__main__":
     socket_io.run(application, debug=literal_eval(config["CORE"]["DEBUG"]),
-                  port=int(config["NET"]["PORT"]))
+                  port=int(config["NET"]["PORT"]), use_reloader=False)
