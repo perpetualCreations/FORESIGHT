@@ -1,8 +1,8 @@
 {
   "__docs": "for more information on how to use this file.",
   "NameOfBackendApplicationHere": {
-    "isExample": false,
-    "host": "localhost",
+    "isExample": true,
+    "host": "0.0.0.0",
     "port": "42069",
     "auth": null,
     "authIsPath": false,

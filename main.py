@@ -45,6 +45,15 @@ pollers = []
 with open("interfaces.json") as interface_config_handler:
     interfaces = json.load(interface_config_handler)
 
+with open("extended.json") as extended_interface_config_location_handler:
+    extended_interface_configs = \
+        json.load(extended_interface_config_location_handler)
+
+for extended_interface_for_loading in extended_interface_configs:
+    with open(extended_interface_for_loading
+              ) as extended_interface_config_handler:
+        interfaces.update(json.load(extended_interface_config_handler))
+
 try:
     del interfaces["__docs"]
 except KeyError:
