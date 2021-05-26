@@ -1,0 +1,27 @@
+{
+  "Table Test Application": {
+    "isExample": false,
+    "host": "127.0.0.1",
+    "port": "42068",
+    "auth": null,
+    "authIsPath": false,
+    "sections": {
+      "containerSection": {
+        "type": "hr",
+        "label": "Table",
+        "testingTable": {
+          "type": "table",
+          "id": "TestTable",
+          "commands": [
+            "TEST_COMMAND",
+            "Test"
+          ],
+          "headers": [
+            "Testing Data",
+            "Test Command Button"
+          ]
+        }
+      }
+    }
+  }
+}

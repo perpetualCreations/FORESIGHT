@@ -1,0 +1,11 @@
+table:nth-child(even) {
+    background-color: var(--element-color);
+}
+tr, th {
+    border: 1px solid var(--outline-color);
+}
+.table-container {
+    overflow-y: scroll;
+    overflow-x: scroll;
+    max-height: 25%;
+}

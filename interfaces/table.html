@@ -1,0 +1,20 @@
+                    <script>
+                        function {{ id }}SocketFunction(command) {
+                            socket.emit("command", {"command":command, "interface":"{{ parent_interface }}", "requestType":"SIGNAL"});
+                        }
+                    </script>
+                    <div id="{{ id }}" class="table-container">
+                        <table id="{{ id }}Table">
+                            <!--
+                            temp solution, make more flexible in the future for lazy loading support. 
+                            otherwise, users with large agent databases will be stuck waiting minutes between
+                            operations.
+                            -->
+                            <tr>
+                                {% for header in headers %}
+                                <th>{{ header }}</th>
+                                {% endfor %}
+                            </tr>
+                            <div id="{{ id }}TableContent"></div>
+                        </table>
+                    </div>

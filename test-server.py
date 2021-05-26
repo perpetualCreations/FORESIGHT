@@ -12,48 +12,61 @@ Designed for the original example interface.
 """
 
 import swbs
-import json
-from time import time
+from time import time, sleep
 
 
-with open("interfaces.json") as interface_load_handle:
-    interfaces = json.load(interface_load_handle)
+test_signal = False
 
-commands = {}
-test_interface = interfaces["NameOfBackendApplicationHere"]["sections"]
 
-for section in test_interface:
-    for element in test_interface[section]:
-        current_element = test_interface[section][element]
-        if isinstance(current_element, dict) is not True:
-            continue
-        if current_element["type"] in ["textEntry", "textEntryBox"]:
-            commands.update({current_element["command"]: "PAYLOAD"})
-        elif current_element["type"] == "button":
-            commands.update({current_element["command"]: "SIGNAL"})
-        elif current_element["type"] in ["textDisplayBox", "textDisplayLabel"]:
-            commands.update({current_element["command"]: "POLL"})
+def handle(instance, connection_socket, client_id: int):
+    """Handle FORESIGHT interface clients."""
+    global test_signal
+    is_event_updater = False
+    swbs.Instance.send(instance, "REQUEST TYPE", connection_socket)
+    type_declaration = swbs.Instance.receive(instance,
+                                             socket_instance=connection_socket)
+    if type_declaration != "FORESIGHT":
+        swbs.Instance.send(instance, "ABORT", connection_socket)
+        swbs.Instance.close(instance)
+        print(type_declaration)
+        raise Exception("Client isn't a FORESIGHT instance!")
+    else:
+        swbs.Instance.send(instance, "OK", connection_socket)
+    while True:
+        if is_event_updater is True:
+            swbs.Instance.send(instance, "exampleTextDisplayBox TEXT",
+                               connection_socket)
+            swbs.Instance.receive(instance, socket_instance=connection_socket)
+            swbs.Instance.send(instance,
+                               "Hello world! UNIX TIME: " + str(time()),
+                               connection_socket)
+            if test_signal is True:
+                test_signal = False
+                swbs.Instance.send(instance,
+                                   "exampleTextDisplayLabel TEXT",
+                                   connection_socket)
+                swbs.Instance.receive(instance,
+                                      socket_instance=connection_socket)
+                swbs.Instance.send(instance,
+                                   "Press it again to update. UNIX TIME: " +
+                                   str(time()), connection_socket)
+        else:
+            command = swbs.Instance.receive(instance,
+                                            socket_instance=connection_socket)
+            if command == "UPDATE":
+                is_event_updater = True
+                continue
+            if command in ["BACKEND_COMMAND_SENDING_TEXT",
+                           "BACKEND_COMMAND_SENDING_TEXT_BOX"]:
+                swbs.Instance.send(instance, "OK", connection_socket)
+                print(swbs.Instance.receive(instance,
+                                            socket_instance=connection_socket))
+            else:
+                test_signal = True
+            print(command)
 
-server = swbs.Host(42069, None)
-server.listen()
-server.send("REQUEST TYPE")
 
-if server.receive() != "FORESIGHT":
-    server.send("ABORT")
-    server.close()
-    raise Exception("Client isn't a FORESIGHT instance!")
+server = swbs.Server(42069, None, connection_handler=handle)
 
 while True:
-    request = server.receive()
-    try:
-        print("Accepted Request: ", request)
-        if commands[request] == "PAYLOAD":
-            server.send("OK!")
-            print("Received (PAYLOAD): ", server.receive())
-        elif commands[request] == "SIGNAL":
-            print("Received (SIGNAL): ", request)
-        elif commands[request] == "POLL":
-            print("Sent POLL data.")
-            server.send("Hello World! UNIX: " + str(time()))
-    except KeyError:
-        print("Mangled Request: ", request)
+    pass

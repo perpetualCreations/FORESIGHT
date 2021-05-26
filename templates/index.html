@@ -4,41 +4,55 @@
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <title>FORESIGHT Web Console</title>
-        <link rel="icon" href="{{ url_for('static', filename = 'favicon.ico') }}">
+        <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}">
         <link rel="stylesheet" type="text/css" href="https://dreamerslegacy.xyz/css/schema.min.css" referrerpolicy="noreferrer">
+        <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='table.css') }}">
     </head>
     <body>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js" integrity="sha512-q/dWJ3kcmjBLU4Qc47E4A9kTB4m3wuTY7vkFJDTZKjTs8jhyGQnaUrxa0Ytd0ssMZhbNua9hE+E7Qv1j+DyZwA==" crossorigin="anonymous"></script>
-        <script>
-            var socket = io();
-            socket.on("pollUpdate", data => {
-                /* value for textarea and textContent for paragraphs */
-                document.getElementById(data["id"]).value = data["data"];
-                document.getElementById(data["id"]).textContent = data["data"];
-            });
-        </script>
-        <div class = "schema">
+        <script src="{{ url_for('static', filename='socket.js') }}"></script>
+        <script src="{{ url_for('static', filename='textEntryCleanup.js') }}"></script>
+        <div class="schema">
             <h1>FORESIGHT</h1>
             <p>Server ID: {{ serverid }}</p>
             <hr>
-            <div style = "display: flex;">
-                <a class = "button" href = "{{ url_for('logout') }}">Logout</a>
-                <a style = "margin-left: 1%;" class = "button" href = "{{ url_for('change_password') }}">Change Password</a>
+            <div class="row">
+                <a class="button" href="{{ url_for('logout') }}">Logout</a>
+                <a style="margin-left: 1%;" class="button" href="{{ url_for('change_password') }}">Change Password</a>
+                <a style="margin-left: 1%;"></a>
             </div>
             <hr>
-            <noscript>
-                <p style = "color: #ff4545;">JavaScript is required for FORESIGHT to process live I/O.</p>
+            <!-- warning displayed only when JavaScript is disabled -->
+            <noscript class="message-box-container">
+                <div class="message-box">
+                    <h2>Warning!</h2>
+                    <p style="color: #ff4545;">JavaScript is required for FORESIGHT to process live I/O.</p>
+                </div>
             </noscript>
-            <div style = "display: flex;">
+            <!-- error log hidden, unless an error is raised -->
+            <div class="message-box-container" id="errors" style="display: none;">
+                <div class="message-box" style="padding-left: 15%; padding-right: 15%;">
+                    <h2>Errors</h2>
+                    <p style="color: #ff4545;">Errors have occurred since initialization. Please be attentive to resolving them, otherwise some functions may be broken or disabled.</p>
+                    <button class = "collapsible">View Log</button>
+                    <div class = "content" style="overflow-x: auto; overflow-y: scroll; white-space: nowrap;" id="error-log">
+                    </div>
+                    <p class="hint">// Some errors may have additional information not shown in the log, and instead displayed in console.</p>
+                </div>
+            </div>
+            <hr>
+            <div class="row">
                 {% for interface in interfaces %}
-                <div class = "card" style = "width: 30%; margin-left: 1.5%; margin-right: 1.5%;">
-                    <hr>
-                    <h2>{{ interface }}</h2>
-                    <p>Hostname: {{ interfaces[interface]["host"] }}, Port: {{ interfaces[interface]["port"] }}</p>
-                    <hr>
-                    {% for section in interfaces[interface]["sections_render"] %}
-                    {{ section|safe }}
-                    {% endfor %}
+                <div class="column" style="margin-left: 1%; margin-right: 1%;">
+                    <div class="card">
+                        <hr>
+                        <h2>{{ interface }}</h2>
+                        <p>Hostname: {{ interfaces[interface]["host"] }}, Port: {{ interfaces[interface]["port"] }}</p>
+                        <hr>
+                        {% for section in interfaces[interface]["sections_render"] %}
+                        {{ section|safe }}
+                        {% endfor %}
+                    </div>
                 </div>
                 {% endfor %}
             </div>

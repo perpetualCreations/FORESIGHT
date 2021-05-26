@@ -1,4 +1,6 @@
 """
+Project FORESIGHT.
+
 ███████╗ ██████╗ ██████╗ ███████╗███████╗██╗ ██████╗ ██╗  ██╗████████╗
 ██╔════╝██╔═══██╗██╔══██╗██╔════╝██╔════╝██║██╔════╝ ██║  ██║╚══██╔══╝
 █████╗  ██║   ██║██████╔╝█████╗  ███████╗██║██║  ███╗███████║   ██║
@@ -6,7 +8,7 @@
 ██║     ╚██████╔╝██║  ██║███████╗███████║██║╚██████╔╝██║  ██║   ██║
 ╚═╝      ╚═════╝ ╚═╝  ╚═╝╚══════╝╚══════╝╚═╝ ╚═════╝ ╚═╝  ╚═╝   ╚═╝
 
-Project FORESIGHT
+Made by perpetualCreations
 """
 
 import flask
@@ -22,6 +24,7 @@ from ast import literal_eval
 from hashlib import sha3_512
 from functools import wraps
 from time import sleep
+from datetime import datetime, timezone
 from random import choices
 from string import ascii_lowercase
 
@@ -40,19 +43,37 @@ interface_template_loader = jinja2.FileSystemLoader(searchpath="interfaces/")
 interface_template_environment = jinja2.Environment(
     loader=interface_template_loader)
 
-pollers = []
+errors = []
 
-with open("interfaces.json") as interface_config_handler:
-    interfaces = json.load(interface_config_handler)
 
-with open("extended.json") as extended_interface_config_location_handler:
-    extended_interface_configs = \
-        json.load(extended_interface_config_location_handler)
+@socket_io.on("logError")
+def log_error_broadcaster(message: str):
+    """Emit event logError to all clients as a broadcast."""
+    error = {"timestamp":
+             datetime.utcnow().replace(tzinfo=timezone.utc).isoformat(),
+             "message": message}
+    errors.append(error)
+    with application.app_context():
+        flask_socketio.emit("logError", error, json=True, broadcast=True,
+                            namespace="/")
 
-for extended_interface_for_loading in extended_interface_configs:
-    with open(extended_interface_for_loading
-              ) as extended_interface_config_handler:
-        interfaces.update(json.load(extended_interface_config_handler))
+
+try:
+    with open("interfaces.json") as interface_config_handler:
+        interfaces = json.load(interface_config_handler)
+    with open("extended.json") as extended_interface_config_location_handler:
+        extended_interface_configs = \
+            json.load(extended_interface_config_location_handler)
+    for extended_interface_for_loading in extended_interface_configs:
+        with open(extended_interface_for_loading
+                  ) as extended_interface_config_handler:
+            interfaces.update(json.load(extended_interface_config_handler))
+except Exception as ParentException:
+    error_string = str(ParentException) + " -> " + \
+        "Failed to load interface configurations."
+    print(error_string)
+    log_error_broadcaster(error_string)
+
 
 try:
     del interfaces["__docs"]
@@ -77,6 +98,10 @@ def connect_handler() -> any:
     """Handle websocket connections, checking for login auth."""
     if flask_login.current_user.is_authenticated is not True:
         return False
+    else:
+        with application.app_context():
+            for error in errors:
+                flask_socketio.emit("logError", error, json=True)
 
 
 class InterfaceClient(swbs.Client):
@@ -85,6 +110,7 @@ class InterfaceClient(swbs.Client):
     def __init__(self, host, port, key, key_is_path):
         """Class initialization."""
         super().__init__(host, port, key, key_is_path)
+        self.dead = False
 
     def connect_wrapper(self) -> None:
         """
@@ -92,51 +118,118 @@ class InterfaceClient(swbs.Client):
 
         Has additional calls to specify ARIA protocol.
 
+        :param is_update: if True, inform server to operate in event-update
+        :type is_update: bool
         :return: None
         """
-        InterfaceClient.connect(self)
-        if InterfaceClient.receive(self) == "REQUEST TYPE":
-            InterfaceClient.send(self, "FORESIGHT")
-        else:
-            InterfaceClient.send(self, "KEYERROR")
-            raise Exception("Failed to initialize interface host!")
+        try:
+            InterfaceClient.connect(self)
+            type_request = InterfaceClient.receive(self)
+            if type_request == "REQUEST TYPE":
+                InterfaceClient.send(self, "FORESIGHT")
+                if InterfaceClient.receive(self) == "ABORT":
+                    InterfaceClient.disconnect()
+                    error_string = "Host " + self.host + " raised ABORT. " + \
+                        "Interface client will shutdown."
+                    self.dead = True
+            else:
+                InterfaceClient.send(self, "KEYERROR")
+                InterfaceClient.disconnect()
+                error_string = "Host " + self.host + \
+                    " failed to send host request type, expected " + \
+                    '"REQUEST TYPE"' + ", got " + type_request + "." + \
+                    " Interface client will shutdown."
+                print(error_string)
+                log_error_broadcaster(error_string)
+                self.dead = True
+        except Exception as ParentException:
+            error_string = "Failed to initialize interface host " + \
+                "connecting to " + self.host + " on port " + str(self.port) + \
+                ". Interface client will shutdown."
+            print(str(ParentException) + " -> " + error_string)
+            log_error_broadcaster(error_string)
+            self.dead = True
 
 
-@socket_io.on("pollUpdate")
-def poll_data_broadcaster(data: dict):
-    """Emit event pollUpdate to all clients as a broadcast."""
+@socket_io.on("eventUpdate")
+def event_data_broadcaster(data: dict):
+    """Emit event eventUpdate to all clients as a broadcast."""
     with application.app_context():
-        flask_socketio.emit("pollUpdate", data, json=True, broadcast=True,
+        flask_socketio.emit("eventUpdate", data, json=True, broadcast=True,
                             namespace="/")
 
 
-def interface_client_poller(target_interface: str, target_section: str,
-                            target_element: str) -> None:
-    """
-    Thread for textDisplayLabel and textDisplayBox element polling.
+@socket_io.on("command")
+def command_handler(json_payload) -> None:
+    """Handle websocket command request events from clients."""
+    json_payload = str(json_payload).replace("'", '"')
+    command_payload = json.loads(json_payload)
+    if interfaces[command_payload["interface"]]["interface_client"].dead is \
+            True:
+        return None
+    if command_payload["requestType"] == "SIGNAL":
+        interfaces[command_payload["interface"]
+                   ]["interface_client"].send(command_payload["command"])
+    elif command_payload["requestType"] == "PAYLOAD":
+        interfaces[command_payload["interface"]
+                   ]["interface_client"].send(command_payload["command"])
+        if interfaces[
+            command_payload["interface"]]["interface_client"].receive() \
+                == "KEYERROR":
+            error_string = "Payload command " + \
+                command_payload["command"] + " is invalid."
+            print(error_string)
+            log_error_broadcaster(error_string)
+            return None
+        interfaces[command_payload["interface"]
+                   ]["interface_client"].send(command_payload["payload"])
+    else:
+        error_string = "Received invalid requestType, expected " + \
+            '"SIGNAL" or "PAYLOAD", got ' + \
+            command_payload["requestType"] + ". Request ignored."
+        print(error_string)
+        log_error_broadcaster(error_string)
 
-    :param target_interface: str, key for target interface
-    :param target_section: str, key for target interface section
-    :param target_element: str, key for target interface element
+
+def interface_client_event_listener(target_interface: str) -> None:
+    """
+    Thread for updating textDisplayLabel, textDisplayBox, and table elements.
+
+    :param interface: name of interface
+    :type target_interface: str
     :return: None
     """
-    while True:
+    set_update = False
+    while interfaces[target_interface]["interface_client_update"].dead is \
+            False:
         while flask_login.current_user is None:
             pass
-        interfaces[target_interface]["interface_client_lock"].acquire(
-            blocking=True)
-        interfaces[target_interface]["interface_client"].send(
-            interfaces[target_interface]["sections"][target_section]
-            [target_element]["command"])
-        poll_data_broadcaster(
-            {"data": interfaces[target_interface]
-             ["interface_client"].receive(), "id": interfaces[target_interface]
-             ["sections"][target_section][target_element]["id"]})
-        interfaces[target_interface]["interface_client_lock"].release()
-        sleep(float(interfaces[target_interface
-                               ]["sections"][target_section
-                                             ][target_element][
-                                                 "pollRateInSeconds"]))
+        if set_update is False:
+            interfaces[target_interface]["interface_client_update"
+                                         ].send("UPDATE")
+            set_update = True
+            continue
+        update_header_data = \
+            interfaces[target_interface]["interface_client_update"
+                                         ].receive().split(" ")
+        if len(update_header_data) == 2 and \
+                update_header_data[1] in ["TEXT", "TABLE"]:
+            interfaces[target_interface]["interface_client_update"].send("OK")
+            update_content_data = \
+                interfaces[target_interface][
+                    "interface_client_update"].receive()
+            event_data_broadcaster(
+                {"data": update_content_data,
+                 "id": update_header_data[0],
+                 "type": update_header_data[1]})
+        else:
+            interfaces[target_interface][
+                "interface_client_update"].send("KEYERROR")
+            error_string = "Received update with invalid header, " + \
+                "for interface " + target_interface + ", content: " + \
+                str(update_header_data)
+            print(error_string)
+            log_error_broadcaster(error_string)
 
 
 for interface in list(interfaces.keys()):
@@ -149,16 +242,25 @@ for interface in list(interfaces.keys()):
             interfaces[interface]["host"], int(interfaces[interface]["port"]),
             interfaces[interface]["auth"], interfaces[interface]["authIsPath"]
             )})
+        interfaces[interface].update(
+            {"interface_client_update":
+             InterfaceClient(interfaces[interface]["host"],
+                             int(interfaces[interface]["port"]),
+                             interfaces[interface]["auth"],
+                             interfaces[interface]["authIsPath"])})
         interfaces[interface]["interface_client"].connect_wrapper()
         interfaces[interface].update({"interface_client_lock":
                                       threading.Lock()})
+        interfaces[interface]["interface_client_update"].connect_wrapper()
+        threading.Thread(target=interface_client_event_listener,
+                         args=(interface,)).start()
         for section in interfaces[interface]["sections"]:
             interface_elements = ""
             for element in interfaces[interface]["sections"][section]:
                 if isinstance(interfaces[interface]["sections"][section]
                               [element], dict) is True:
                     interfaces[interface]["sections"][section][element].update(
-                        {"id": ''.join(choices(ascii_lowercase, k=128))})
+                        {"id": element})
                     interfaces[interface]["sections"][section][element].update(
                         {"parent_interface": interface})
                     interface_elements += \
@@ -167,41 +269,13 @@ for interface in list(interfaces.keys()):
                             ["type"] + ".html").render(
                                 **interfaces[interface]["sections"][section]
                                 [element])
-                    if interfaces[interface]["sections"][section][element][
-                            "type"] in ["textDisplayBox", "textDisplayLabel"]:
-                        pollers.append(threading.Thread(
-                            target=interface_client_poller,
-                            args=(interface, section, element), daemon=True
-                            ).start())
                 else:
                     continue
             content.append(interface_template_environment.get_template(
                 interfaces[interface]["sections"][section]["type"] + ".html"
                 ).render(label=interfaces[interface]["sections"][section]
                          ["label"], interfaces=interface_elements))
-
         interfaces[interface].update({"sections_render": content})
-
-
-@socket_io.on("command")
-def command_handler(json_payload) -> None:
-    """Handle websocket command request events from clients."""
-    json_payload = str(json_payload).replace("'", '"')
-    command_payload = json.loads(json_payload)
-    interfaces[command_payload["interface"]
-               ]["interface_client_lock"].acquire(blocking=True)
-    if command_payload["requestType"] == "SIGNAL":
-        interfaces[command_payload["interface"]
-                   ]["interface_client"].send(command_payload["command"])
-    elif command_payload["requestType"] == "PAYLOAD":
-        interfaces[command_payload["interface"]
-                   ]["interface_client"].send(command_payload["command"])
-        interfaces[command_payload["interface"]
-                   ]["interface_client"].receive()
-        interfaces[command_payload["interface"]
-                   ]["interface_client"].send(command_payload["payload"])
-    interfaces[command_payload["interface"]
-               ]["interface_client_lock"].release()
 
 
 @application.route("/")
