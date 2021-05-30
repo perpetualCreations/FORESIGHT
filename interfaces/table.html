@@ -10,11 +10,13 @@
                             otherwise, users with large agent databases will be stuck waiting minutes between
                             operations.
                             -->
-                            <tr>
-                                {% for header in headers %}
-                                <th>{{ header }}</th>
-                                {% endfor %}
-                            </tr>
-                            <div id="{{ id }}TableContent"></div>
+                            <thead>
+                                <tr>
+                                    {% for header in headers %}
+                                    <th>{{ header }}</th>
+                                    {% endfor %}
+                                </tr>
+                            </thead>
+                            <tbody id="{{ id }}TableContent"></tbody>
                         </table>
                     </div>

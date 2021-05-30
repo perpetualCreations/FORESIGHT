@@ -1,8 +1,15 @@
 table:nth-child(even) {
     background-color: var(--element-color);
 }
-tr, th {
+tr, th, table {
     border: 1px solid var(--outline-color);
+    color: var(--paragraph-color);
+}
+th {
+    color: var(--header-color);
+}
+table {
+    width: 100%;
 }
 .table-container {
     overflow-y: scroll;

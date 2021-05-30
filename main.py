@@ -22,11 +22,7 @@ import threading
 from os import urandom
 from ast import literal_eval
 from hashlib import sha3_512
-from functools import wraps
-from time import sleep
 from datetime import datetime, timezone
-from random import choices
-from string import ascii_lowercase
 
 
 config = configparser.ConfigParser()
@@ -207,8 +203,18 @@ def interface_client_event_listener(target_interface: str) -> None:
         if set_update is False:
             interfaces[target_interface]["interface_client_update"
                                          ].send("UPDATE")
-            set_update = True
-            continue
+            if interfaces[target_interface]["interface_client_update"
+                                            ].receive() == "OK":
+                set_update = True
+                continue
+            else:
+                error_string = "Host for interface " + target_interface + \
+                    " does not support event updating, any display " + \
+                    "elements in the interfacce will not update. " + \
+                    "Exiting listener."
+                print(error_string)
+                log_error_broadcaster(error_string)
+                return None
         update_header_data = \
             interfaces[target_interface]["interface_client_update"
                                          ].receive().split(" ")
@@ -218,6 +224,8 @@ def interface_client_event_listener(target_interface: str) -> None:
             update_content_data = \
                 interfaces[target_interface][
                     "interface_client_update"].receive()
+            if update_header_data[1] == "TABLE":
+                update_content_data = literal_eval(update_content_data)
             event_data_broadcaster(
                 {"data": update_content_data,
                  "id": update_header_data[0],

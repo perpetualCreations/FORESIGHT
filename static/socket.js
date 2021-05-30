@@ -10,18 +10,18 @@ socket.on("eventUpdate", data => {
         /* scripting for populating target table */
         document.getElementById(data["id"] + "TableContent").innerHTML = "";
         for (row in data["data"]) {
-            document.getElementById(data["id"] + "TableContent").innerHTML += "<tr>";
-            for (column in row) {
-                document.getElementById(data["id"] + "TableContent").innerHTML += ("<td>" + column + "</td>"); 
+            tableRow = document.createElement("tr");
+            for (column in data["data"][row]) {
+                tableRow.innerHTML += ("<td>" + data["data"][row][column] + "</td>"); 
             }
-            document.getElementById(data["id"] + "TableContent").innerHTML += "</tr>"
+            document.getElementById(data["id"] + "TableContent").appendChild(tableRow);
         }
     }
 });
 
 socket.on("logError", data => {
     document.getElementById("errors").style.display = "initial";
-    document.getElementById("error-log").innerHTML += "<p>[" + data["timestamp"] + "]: " + data["message"] + "</p>"
+    document.getElementById("error-log").innerHTML += "<p>[" + data["timestamp"] + "]: " + data["message"] + "</p>";
 });
 
 function dispatchCommand(command, interface, type, payload) {

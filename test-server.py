@@ -55,6 +55,7 @@ def handle(instance, connection_socket, client_id: int):
                                             socket_instance=connection_socket)
             if command == "UPDATE":
                 is_event_updater = True
+                swbs.Instance.send(instance, "OK", connection_socket)
                 continue
             if command in ["BACKEND_COMMAND_SENDING_TEXT",
                            "BACKEND_COMMAND_SENDING_TEXT_BOX"]:
