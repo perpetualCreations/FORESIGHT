@@ -29,7 +29,7 @@ def handle(instance, connection_socket, client_id: int):
             swbs.Instance.send(instance,
                                "[['Test'], ['" + str(time()) + "']]",
                                connection_socket)
-            sleep(5)
+            swbs.Instance.receive(instance, socket_instance=connection_socket)
         else:
             command = swbs.Instance.receive(instance,
                                             socket_instance=connection_socket)

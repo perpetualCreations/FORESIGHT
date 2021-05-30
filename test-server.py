@@ -40,6 +40,7 @@ def handle(instance, connection_socket, client_id: int):
             swbs.Instance.send(instance,
                                "Hello world! UNIX TIME: " + str(time()),
                                connection_socket)
+            swbs.Instance.receive(instance, socket_instance=connection_socket)
             if test_signal is True:
                 test_signal = False
                 swbs.Instance.send(instance,
@@ -50,6 +51,8 @@ def handle(instance, connection_socket, client_id: int):
                 swbs.Instance.send(instance,
                                    "Press it again to update. UNIX TIME: " +
                                    str(time()), connection_socket)
+                swbs.Instance.receive(instance,
+                                      socket_instance=connection_socket)
         else:
             command = swbs.Instance.receive(instance,
                                             socket_instance=connection_socket)

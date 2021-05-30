@@ -225,11 +225,19 @@ def interface_client_event_listener(target_interface: str) -> None:
                 interfaces[target_interface][
                     "interface_client_update"].receive()
             if update_header_data[1] == "TABLE":
-                update_content_data = literal_eval(update_content_data)
+                try:
+                    update_content_data = literal_eval(update_content_data)
+                except Exception as ParentException:
+                    error_string = "Table data for interface " + \
+                        target_interface + " could not be interpreted, " + \
+                        "raised exception: " + str(ParentException)
+                    print(error_string)
+                    log_error_broadcaster(error_string)
             event_data_broadcaster(
                 {"data": update_content_data,
                  "id": update_header_data[0],
                  "type": update_header_data[1]})
+            interfaces[target_interface]["interface_client_update"].send("OK")
         else:
             interfaces[target_interface][
                 "interface_client_update"].send("KEYERROR")

@@ -12,13 +12,8 @@
         "testingTable": {
           "type": "table",
           "id": "TestTable",
-          "commands": [
-            "TEST_COMMAND",
-            "Test"
-          ],
           "headers": [
-            "Testing Data",
-            "Test Command Button"
+            "Testing Data"
           ]
         }
       }
