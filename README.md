@@ -3,8 +3,6 @@
 
 Flexible Flask web application for defining front-end interfaces in a JSON file.
 
-Made originally for managing ARBITER, with prospects for usage in future BRIAH-layer applications.
-
 Featuring basic password logins, powered by the Flask-Login project. 
 
 ## 3rd-Party Assets
