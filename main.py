@@ -64,8 +64,8 @@ try:
         with open(extended_interface_for_loading
                   ) as extended_interface_config_handler:
             interfaces.update(json.load(extended_interface_config_handler))
-except Exception as ParentException:
-    error_string = str(ParentException) + " -> " + \
+except Exception as parent_exception:
+    error_string = str(parent_exception) + " -> " + \
         "Failed to load interface configurations."
     print(error_string)
     log_error_broadcaster(error_string)
@@ -138,11 +138,11 @@ class InterfaceClient(swbs.Client):
                 print(error_string)
                 log_error_broadcaster(error_string)
                 self.dead = True
-        except Exception as ParentException:
+        except Exception as parent_exception:
             error_string = "Failed to initialize interface host " + \
                 "connecting to " + self.host + " on port " + str(self.port) + \
                 ". Interface client will shutdown."
-            print(str(ParentException) + " -> " + error_string)
+            print(str(parent_exception) + " -> " + error_string)
             log_error_broadcaster(error_string)
             self.dead = True
 
@@ -227,10 +227,10 @@ def interface_client_event_listener(target_interface: str) -> None:
             if update_header_data[1] == "TABLE":
                 try:
                     update_content_data = literal_eval(update_content_data)
-                except Exception as ParentException:
+                except Exception as parent_exception:
                     error_string = "Table data for interface " + \
                         target_interface + " could not be interpreted, " + \
-                        "raised exception: " + str(ParentException)
+                        "raised exception: " + str(parent_exception)
                     print(error_string)
                     log_error_broadcaster(error_string)
             event_data_broadcaster(
